@@ -45,9 +45,19 @@ x1,z1 = tir(theta1,v0,tsim)
 x3,z3 = tir(theta3,v0,tsim)
 x5,z5 = tir(theta5,v0,tsim)
 
-len(x3)
-plt.plot(z3-z_num)
+fig, ax0 = plt.subplots()
+ax0.set_ylim(0,55)
+p1, = ax0.plot(x3,z3, label='résultats analytique')
+p2, = ax0.plot(x_num,z_num,label='résultats numérique',color='red', marker='.', linestyle='dashed',linewidth=1, markersize=0.1)
+
+leg = ax0.legend(loc="upper right",ncol=2, shadow=True, title="Légende", fancybox=True)
+leg.get_title().set_color("red")
+
+ax0.set(xlabel='distance (metre)', ylabel='hauteur (metre)', title='comparaison entre les résultats analytique et numérique')
+
+plt.savefig('analytique_vs_numerique.png',dpi=300)
 plt.show()
+
 fig, ax = plt.subplots()
 ax.set_ylim(0,50)
 
@@ -61,7 +71,7 @@ tmax5 = round(x5[-1]/(v0*np.cos(theta1)),1)
 
 leg1 = ax.legend(loc="upper right",ncol=2, shadow=True, title="Distance maximum (m)", fancybox=True)
 leg1.get_title().set_color("red")
-leg2 = ax.legend((l1,l3,l5),(tmax1,tmax2,tmax3,tmax4,tmax5),loc="upper left",ncol=2, shadow=True, title="Durée du vol (s)", fancybox=True)
+leg2 = ax.legend((l1,l3,l5),(tmax1,tmax3,tmax5),loc="upper left",ncol=2, shadow=True, title="Durée du vol (s)", fancybox=True)
 leg2.get_title().set_color("green")
 leg3 = ax.legend((l1,l3,l5),(round(theta1,1),round(theta3,1),round(theta5,1)),loc="lower center",ncol=2, shadow=True, title="Angle (radians)", fancybox=True)
 leg3.get_title().set_color("blue")
@@ -70,5 +80,5 @@ ax.add_artist(leg2)
 
 ax.set(xlabel='distance (metre)', ylabel='hauteur (metre)', title='tir de ballon')
 
-plt.savefig('figure.png',dpi=500)
+plt.savefig('ballon_analytique_angle.png',dpi=500)
 plt.show()
