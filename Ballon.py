@@ -1,7 +1,6 @@
 import numpy as np
 import scipy as sp
 import matplotlib.pyplot as plt
-from scipy.integrate import odeint
 
 def tir(theta, v0, tsim, g = 9.81, Cx=0.45,S=np.pi*(11)**2,m=0.450,x0=16,z0=0):
     t = np.linspace(0,tsim,1000)
@@ -9,7 +8,7 @@ def tir(theta, v0, tsim, g = 9.81, Cx=0.45,S=np.pi*(11)**2,m=0.450,x0=16,z0=0):
     z = -(1/2)*g*t**2 + v0*t*np.sin(theta)
     n = 0
     while True:
-        if i > len(z)-1:
+        if n > len(z)-1:
             break
         if z[n] < 0:
             break
@@ -39,7 +38,7 @@ tsim = 10
 x0 = 16
 
 x_num, z_num = tir_num(theta3,v0,tsim)
-plt.plot(x_num,z_num)
+#plt.plot(x_num,z_num)
 
 x1,z1 = tir(theta1,v0,tsim)
 x3,z3 = tir(theta3,v0,tsim)
