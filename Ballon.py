@@ -2,6 +2,8 @@ import numpy as np
 import scipy as sp
 import matplotlib.pyplot as plt
 
+############ Définition des fonctions
+
 def tir(theta, v0, tsim, g = 9.81, Cx=0.45,S=np.pi*(11)**2,m=0.450,x0=16,z0=0):
     t = np.linspace(0,tsim,1000)
     x = v0*t*np.cos(theta) + x0
@@ -30,6 +32,8 @@ def tir_num(theta,v0,tsim,g = 9.81,x0=16,z0=0):
 
     return x,z
 
+############ Définition des constantes
+
 theta1 = np.pi/6
 theta3 = np.pi/4
 theta5 = np.pi/2.5
@@ -37,12 +41,15 @@ v0 = 40
 tsim = 10
 x0 = 16
 
+############# Calculs des trajectoires
+
 x_num, z_num = tir_num(theta3,v0,tsim)
-#plt.plot(x_num,z_num)
 
 x1,z1 = tir(theta1,v0,tsim)
 x3,z3 = tir(theta3,v0,tsim)
 x5,z5 = tir(theta5,v0,tsim)
+
+############# Tracé des graphique
 
 fig, ax0 = plt.subplots()
 ax0.set_ylim(0,55)
