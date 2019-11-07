@@ -61,7 +61,7 @@ for i in range(3,13):
 print('maximum de x avec frottement => theta = pi/6')
 print('maximum de x sans frottement => theta = pi/4')
 
-############# Tracé des graphique
+############# Tracé des graphiques
 
 fig, ax0 = plt.subplots()
 ax0.set_ylim(0,55)
