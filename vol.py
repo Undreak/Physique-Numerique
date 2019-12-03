@@ -4,91 +4,154 @@ import matplotlib.pyplot as plt
 
 ################ Définition des fonctions
 
-def vol(theta,v0,tsim,m=30000,g=9.81,x0=0,z0=0,Cx=0.5,S=np.pi*(0.5)**2,q=166,ve=2.11e3,mcap=1400):
+def vol(theta,tsim,m=30e3,g=9.81,x0=0,z0=0,vx0=0,vz0=0,ax0=0,az0=0,Cx=0.5,S=np.pi*(0.8)**2,q=166,ve=2.11e3,mcap=1400,poussee=0,thetaF=0):
+    ##Initialisation de tous les vecteurs.
     x, z = np.zeros(N),np.zeros(N)
     x[0], z[0] = x0, z0
-    dxdt,dzdt = np.zeros(N),np.zeros(N)
-    dxdt[0],dzdt[0] = v0*np.cos(theta),v0*np.sin(theta)
+    vx,vz = np.zeros(N),np.zeros(N)
+    vx[0],vz[0] = vx0, vz0
     dt = tsim/N
-    dxdt2,dzdt2 = np.zeros(N),np.zeros(N)
-    dxdt2[0],dzdt2[0] = 0,0
+    ax,az = np.zeros(N),np.zeros(N)
+    ax[0],az[0] = ax0,az0
     Ttab,rhotab = np.zeros(N),np.zeros(N)
     Ttab[0],rhotab[0] = 288.15,1.2*(288.15/288.15)**(1 + 34.16e-3/(-6.5e-3))
-    Cpara,Spara = 1.75,0
-    prop=q*ve
+    thetaI=theta
+    Cpara,Spara = 1.75,0    ##Coefficient de frottement et surface des parachutes, nulle au départ car pas déployé.
+    prop = q*ve*poussee              ##Force de poussée de la fusée
+
     for i in range(N-1):
-        T, rho = atmostphere(z[i])
-        if dzdt[i] < 0:
-            Cx,Spara = coeff(dzdt[i],T,z[i])
+        T, rho = atmosphere(z[i])  ##Calcul de la densité de l'air et de la température en fontion de l'altitude.
+        if vz[i] < 0:
+            Cx = coeff(vz[i],T)    ##Calcul du coeff Cx lors de la redescente
+            Spara = para(z[i])             ##et de Spara à partir d'une certaine altitude.
         if z[i] < 0:
             break
         Ttab[i+1] = T
         rhotab[i+1] = rho
+        if thetaF != 0 and i <= 24/dt:
+            theta -= (thetaI - thetaF)*dt/24
 
-        dxdt2[i+1] = ( prop - 0.5*rho*Cx*S*abs(dxdt[i])*dxdt[i])/m
-        dzdt2[i+1] = ( prop - 0.5*rho*abs(dzdt[i])*dzdt[i]*(S*Cx + Spara*Cpara) - m*g)/m
+        ax[i+1] = ( prop*np.cos(theta) - 0.5*rho*(S*Cx + Spara*Cpara)*S*abs(vx[i])*vx[i])/m
+        az[i+1] = ( prop*np.sin(theta) - 0.5*rho*abs(vz[i])*vz[i]*(S*Cx + Spara*Cpara) - m*g)/m
 
-        if m >= mcap:
+        if poussee == 1:
             m -= q*dt
         if m <= mcap:
             prop = 0
-        if dt*i >= 143.5:
-            prop = 0
-        dxdt[i+1] = dxdt[i] + dxdt2[i+1]*dt
-        dzdt[i+1] = dzdt[i] + dzdt2[i+1]*dt
 
-        x[i+1] = x[i] + dxdt[i+1]*dt
-        z[i+1] = z[i] + dzdt[i+1]*dt
-    return x,z,dxdt,dzdt,dxdt2,dzdt2,Ttab,rhotab
+        vx[i+1] = vx[i] + (ax[i+1] + ax[i])*dt/2
+        vz[i+1] = vz[i] + (az[i+1] + az[i])*dt/2
 
-def atmostphere(z):
+        x[i+1] = x[i] + (vx[i+1] + vx[i])*dt/2
+        z[i+1] = z[i] + (vz[i+1] + vz[i])*dt/2
+    return x,z,m,vx,vz,ax,az,Ttab,rhotab
+
+def atmosphere(z):
+    B = 34.16e-3
     if z <= 11000:
-        T = 288.15 - 6.5e-3*(z)
-        rho = 1.2*(288.15/T)**(1 + 34.16e-3/(-6.5e-3))
+        lbd = -6.5e-3
+        T = 288.15 + lbd*(z)
+        rho = 1.2*(288.15/T)**(1 + B/lbd)
+
     elif 11000 < z <= 20000:
         T = 216.65
-        rho = 0.35654*np.exp(-(36.16e-3 *(z - 11000)/T))
+        rho = 0.35654*np.exp(-(B *(z - 11000)/T))
+
     elif 20000 < z <= 32000:
-        T = 288.15 + 1e-3*(z - 20000)
-        rho = 0.086261*(216.65/T)**(1 + 34.16e-3/(1e-3))
+        lbd = 1e-3
+        T = 288.15 + lbd*(z - 20000)
+        rho = 0.086261*(216.65/T)**(1 + B/lbd)
+
     elif 32000 < z <= 47000:
-        T = 288.15  + 2.8e-3 *(z - 32000)
-        rho = 0.012961*(228.65/T)**(1 + 34.16e-3/(2.8e-3))
+        lbd = 2.8e-3
+        T = 288.15  + lbd*(z - 32000)
+        rho = 0.012961*(228.65/T)**(1 + B/lbd)
+
     elif z > 47000:
         T = 270.65
-        rho = 0.0013993*np.exp(-((36.16e-3) *(z - 47000)/T))
+        rho = 0.0013993*np.exp(-(B *(z - 47000)/T))
+
     return T,rho
 
-def coeff(dzdt,T,z):
-    M = dzdt/(1.4*287*T)**2
-    S = 0
+def coeff(vz,T):
+    M = vz/(1.4*287*T)**2
     if M < 1:
         Cx = 0.9
     else :
         Cx = 1.5
+    return Cx
+
+def para(z):
+    Spara = 0
     if z <= 6700:
-        S = np.pi*(1)**2
-        if z <= 3000:
-            S = np.pi*(8)**2
-    return Cx,S
+        Spara = np.pi*(1)**2
+    if z <= 3000:
+        Spara = np.pi*(2)**2
+    if z <= 2990:
+        Spara = np.pi*(3)**2
+    if z <= 2980:
+        Spara = np.pi*(4)**2
+    if z <= 2970:
+        Spara = np.pi*(5)**2
+    if z <= 2960:
+        Spara = np.pi*(6)**2
+    if z <= 2950:
+        Spara = np.pi*(7)**2
+    if z <= 2940:
+        Spara = np.pi*(8)**2
+    return Spara
 
 ############## Définition des variables
 
-theta = np.pi/4
-v0 = 0
-tsim = 2000
+theta1 = np.pi/2
+theta2 = np.pi/4
+tsim1 = 16
+tsim2 = 127.5
+tsim3 = 1000
 N = 10000
-t = np.linspace(0,tsim,N)
 
 ############## Calcul des trajectoires
 
-x,z,dxdt,dzdt,dxdt2,dzdt2,Ttab,rhotab = vol(theta,v0,tsim)
+x1,z1,m1,vx1,vz1,ax1,az1,Ttab1,rhotab1 = vol(theta1,tsim1,poussee=1) ##La fusée décolle verticalement
+x2,z2,m2,vx2,vz2,ax2,az2,Ttab2,rhotab2 = vol(theta1,tsim2,x0=x1[-1],z0=z1[-1],m=m1,poussee=1,vx0=vx1[-1],vz0=vz1[-1],ax0=ax1[-1],az0=az1[-1],thetaF=theta2)   ##Puis prend progressivement un angle de 45 ◦ par rapport à l’horizontale ≈ 16 s après le lancement.
+x3,z3,m3,vx3,vz3,ax3,az3,Ttab3,rhotab3 = vol(0,4,x0=x2[-1],z0=z2[-1],m=m2-580,vx0=vx2[-1],vz0=vz2[-1],ax0=ax2[-1],az0=az2[-1])    ##Largage de la tour d’éjection d’urgence à la fin de la poussée de la fusée
+x4,z4,m4,vx4,vz4,az4,az4,Ttab4,rhotab4 = vol(0,tsim3,x0=x3[-1],z0=z3[-1],m=1400,vx0=vx3[-1],vz0=vz3[-1],ax0=ax3[-1],az0=az3[-1])    ##Séparation de la capsule Mercury 4 secondes après la fin de la poussée
 
-if abs(dzdt[np.argmin(z)]) > 20:
-    print('CRASH DE LA CAPSULE')
-if max(abs(dzdt2))/10 > 50:
-    print('ACCÉLÉRATION TROP FORTE')
 ############## Tracé des graphiques
 
-plt.plot(t,z)
+fig, ax0 = plt.subplots()
+
+color = 'tab:red'
+ax0.set_xlabel('x (km)', color='tab:blue')
+ax0.set_ylabel('z (km)', color=color)
+ax0.set_title('Vol d\'Alan Shepard')
+ax0.plot(x1/1000,z1/1000)
+ax0.plot(x2/1000,z2/1000)
+ax0.plot(x3/1000,z3/1000, label=int(max(x4))/1000)
+ax0.plot(x4/1000,z4/1000, label=int(max(z4))/1000)
+
+ax0.tick_params(axis='y', labelcolor=color)
+ax0.tick_params(axis='x', labelcolor='tab:blue')
+
+leg = ax0.legend(loc="center",ncol=2, shadow=True, title="x max et z max (km)", fancybox=True)
+leg.get_title().set_color("red")
+
+plt.show()
+
+fig, ax1 = plt.subplots()
+
+color = 'tab:red'
+ax1.set_xlabel('time (s)')
+ax1.set_ylabel('z', color=color)
+ax1.plot(z4, color=color)
+ax1.tick_params(axis='y', labelcolor=color)
+
+ax2 = ax1.twinx()
+
+color = 'tab:blue'
+ax2.set_ylabel('g', color=color)
+ax2.plot(az4/10, color=color)
+ax2.tick_params(axis='y', labelcolor=color)
+
+fig.tight_layout()
 plt.show()
