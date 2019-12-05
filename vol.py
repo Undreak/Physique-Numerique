@@ -14,7 +14,7 @@ def vol(theta,tsim,m=30e3,g=9.81,x0=0,z0=0,vx0=0,vz0=0,ax0=0,az0=0,Cx=0.5,S=np.p
     ax,az = np.zeros(N),np.zeros(N)
     ax[0],az[0] = ax0,az0
     Ttab,rhotab = np.zeros(N),np.zeros(N)
-    Ttab[0],rhotab[0] = 288.15,1.2*(288.15/288.15)**(1 + 34.16e-3/(-6.5e-3))
+    Ttab[0],rhotab[0] = atmosphere(z0)
     thetaI=theta
     Cpara,Spara = 1.75,0    ##Coefficient de frottement et surface des parachutes, nulle au départ car pas déployé.
     prop = q*ve*poussee              ##Force de poussée de la fusée
@@ -29,7 +29,7 @@ def vol(theta,tsim,m=30e3,g=9.81,x0=0,z0=0,vx0=0,vz0=0,ax0=0,az0=0,Cx=0.5,S=np.p
         Ttab[i+1] = T
         rhotab[i+1] = rho
         if thetaF != 0 and i <= 24/dt:
-            theta -= (thetaI - thetaF)*dt/24
+            theta -= (thetaI - thetaF)*dt/24    ##Calcul de la variation d'angle, pi/2 => pi/4 en 24 secondes
 
         ax[i+1] = ( prop*np.cos(theta) - 0.5*rho*(S*Cx + Spara*Cpara)*S*abs(vx[i])*vx[i])/m
         az[i+1] = ( prop*np.sin(theta) - 0.5*rho*abs(vz[i])*vz[i]*(S*Cx + Spara*Cpara) - m*g)/m
@@ -74,7 +74,7 @@ def atmosphere(z):
     return T,rho
 
 def coeff(vz,T):
-    M = vz/(1.4*287*T)**2
+    M = vz/(1.4*287*T)**0.5
     if M < 1:
         Cx = 0.9
     else :
@@ -107,7 +107,7 @@ theta1 = np.pi/2
 theta2 = np.pi/4
 tsim1 = 16
 tsim2 = 127.5
-tsim3 = 1000
+tsim3 = 700
 N = 10000
 
 ############## Calcul des trajectoires
@@ -136,6 +136,8 @@ ax0.tick_params(axis='x', labelcolor='tab:blue')
 leg = ax0.legend(loc="center",ncol=2, shadow=True, title="x max et z max (km)", fancybox=True)
 leg.get_title().set_color("red")
 
+plt.savefig('Vol d\'Alan Shepard.png',dpi=300)
+
 plt.show()
 
 fig, ax1 = plt.subplots()
@@ -143,15 +145,16 @@ fig, ax1 = plt.subplots()
 color = 'tab:red'
 ax1.set_xlabel('time (s)')
 ax1.set_ylabel('z', color=color)
-ax1.plot(z4, color=color)
+ax1.plot(np.linspace(147.5,tsim3+147.5,N),z4, color=color)
 ax1.tick_params(axis='y', labelcolor=color)
 
 ax2 = ax1.twinx()
 
 color = 'tab:blue'
 ax2.set_ylabel('g', color=color)
-ax2.plot(az4/10, color=color)
+ax2.plot(np.linspace(147.5,tsim3+147.5,N),az4/10, color=color)
 ax2.tick_params(axis='y', labelcolor=color)
 
 fig.tight_layout()
+plt.savefig('Accélération et postion au cours du temps',dpi=300)
 plt.show()
