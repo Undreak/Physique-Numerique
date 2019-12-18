@@ -4,27 +4,29 @@ import matplotlib.pyplot as plt
 
 ################ Définition des fonctions
 
-def vol(theta,tsim,m=30e3,g=9.81,x0=0,z0=0,vx0=0,vz0=0,ax0=0,az0=0,Cx=0.5,S=np.pi*(0.8)**2,q=166,ve=2.11e3,mcap=1400,poussee=0,thetaF=0):
+def vol(N,theta,tsim,m=30e3,g=9.81,x0=0,z0=0,vx0=0,vz0=0,ax0=0,az0=0,Cx=0.5,S=np.pi*(0.8)**2,q=166,ve=2.11e3,mcap=1400,poussee=0,thetaF=0):
     ##Initialisation de tous les vecteurs.
-    x, z = np.zeros(N),np.zeros(N)
+    t = int(tsim*N)
+    x, z = np.zeros(t),np.zeros(t)
     x[0], z[0] = x0, z0
-    vx,vz = np.zeros(N),np.zeros(N)
+    vx,vz = np.zeros(t),np.zeros(t)
     vx[0],vz[0] = vx0, vz0
-    dt = tsim/N
-    ax,az = np.zeros(N),np.zeros(N)
+    dt = tsim/t
+    ax,az = np.zeros(t),np.zeros(t)
     ax[0],az[0] = ax0,az0
-    Ttab,rhotab = np.zeros(N),np.zeros(N)
+    Ttab,rhotab = np.zeros(t),np.zeros(t)
     Ttab[0],rhotab[0] = atmosphere(z0)
     thetaI=theta
     Cpara,Spara = 1.75,0    ##Coefficient de frottement et surface des parachutes, nulle au départ car pas déployé.
     prop = q*ve*poussee              ##Force de poussée de la fusée
-
-    for i in range(N-1):
+    
+    for i in range(t-1):
         T, rho = atmosphere(z[i])  ##Calcul de la densité de l'air et de la température en fontion de l'altitude.
         if vz[i] < 0:
             Cx = coeff(vz[i],T)    ##Calcul du coeff Cx lors de la redescente
             Spara = para(z[i])             ##et de Spara à partir d'une certaine altitude.
         if z[i] < 0:
+            x,z,m,vx,vz,ax,az,Ttab,rhotab = x[:i],z[:i],m,vx[:i],vz[:i],ax[:i],az[:i],Ttab[:i],rhotab[:i]
             break
         Ttab[i+1] = T
         rhotab[i+1] = rho
@@ -108,14 +110,14 @@ theta2 = np.pi/4
 tsim1 = 16
 tsim2 = 127.5
 tsim3 = 700
-N = 10000
+N = 100
 
 ############## Calcul des trajectoires
 
-x1,z1,m1,vx1,vz1,ax1,az1,Ttab1,rhotab1 = vol(theta1,tsim1,poussee=1) ##La fusée décolle verticalement
-x2,z2,m2,vx2,vz2,ax2,az2,Ttab2,rhotab2 = vol(theta1,tsim2,x0=x1[-1],z0=z1[-1],m=m1,poussee=1,vx0=vx1[-1],vz0=vz1[-1],ax0=ax1[-1],az0=az1[-1],thetaF=theta2)   ##Puis prend progressivement un angle de 45 ◦ par rapport à l’horizontale ≈ 16 s après le lancement.
-x3,z3,m3,vx3,vz3,ax3,az3,Ttab3,rhotab3 = vol(0,4,x0=x2[-1],z0=z2[-1],m=m2-580,vx0=vx2[-1],vz0=vz2[-1],ax0=ax2[-1],az0=az2[-1])    ##Largage de la tour d’éjection d’urgence à la fin de la poussée de la fusée
-x4,z4,m4,vx4,vz4,az4,az4,Ttab4,rhotab4 = vol(0,tsim3,x0=x3[-1],z0=z3[-1],m=1400,vx0=vx3[-1],vz0=vz3[-1],ax0=ax3[-1],az0=az3[-1])    ##Séparation de la capsule Mercury 4 secondes après la fin de la poussée
+x1,z1,m1,vx1,vz1,ax1,az1,Ttab1,rhotab1 = vol(N,theta1,tsim1,poussee=1) ##La fusée décolle verticalement
+x2,z2,m2,vx2,vz2,ax2,az2,Ttab2,rhotab2 = vol(N,theta1,tsim2,x0=x1[-1],z0=z1[-1],m=m1,poussee=1,vx0=vx1[-1],vz0=vz1[-1],ax0=ax1[-1],az0=az1[-1],thetaF=theta2)   ##Puis prend progressivement un angle de 45 ◦ par rapport à l’horizontale ≈ 16 s après le lancement.
+x3,z3,m3,vx3,vz3,ax3,az3,Ttab3,rhotab3 = vol(N,0,4,x0=x2[-1],z0=z2[-1],m=m2-580,vx0=vx2[-1],vz0=vz2[-1],ax0=ax2[-1],az0=az2[-1])    ##Largage de la tour d’éjection d’urgence à la fin de la poussée de la fusée
+x4,z4,m4,vx4,vz4,az4,az4,Ttab4,rhotab4 = vol(N,0,tsim3,x0=x3[-1],z0=z3[-1],m=1400,vx0=vx3[-1],vz0=vz3[-1],ax0=ax3[-1],az0=az3[-1])    ##Séparation de la capsule Mercury 4 secondes après la fin de la poussée
 
 ############## Tracé des graphiques
 
@@ -139,7 +141,7 @@ leg.get_title().set_color("red")
 plt.savefig('Vol d\'Alan Shepard.png',dpi=300)
 
 plt.show()
-
+'''
 fig, ax1 = plt.subplots()
 
 color = 'tab:red'
@@ -158,3 +160,4 @@ ax2.tick_params(axis='y', labelcolor=color)
 fig.tight_layout()
 plt.savefig('Accélération et postion au cours du temps',dpi=300)
 plt.show()
+'''
