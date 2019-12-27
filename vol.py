@@ -11,7 +11,7 @@ def vol(N,theta,tsim,m=30e3,g=9.81,x0=0,z0=0,vx0=0,vz0=0,ax0=0,az0=0,Cx=0.5,S=np
     x[0], z[0] = x0, z0
     vx,vz = np.zeros(t),np.zeros(t)
     vx[0],vz[0] = vx0, vz0
-    dt = tsim/t
+    dt = 1/N
     ax,az = np.zeros(t),np.zeros(t)
     ax[0],az[0] = ax0,az0
     Ttab,rhotab = np.zeros(t),np.zeros(t)
@@ -32,7 +32,6 @@ def vol(N,theta,tsim,m=30e3,g=9.81,x0=0,z0=0,vx0=0,vz0=0,ax0=0,az0=0,Cx=0.5,S=np
         rhotab[i+1] = rho
         if thetaF != 0 and i <= 24/dt:
             theta -= (thetaI - thetaF)*dt/24    ##Calcul de la variation d'angle, pi/2 => pi/4 en 24 secondes
-
         ax[i+1] = ( prop*np.cos(theta) - 0.5*rho*(S*Cx + Spara*Cpara)*S*abs(vx[i])*vx[i])/m
         az[i+1] = ( prop*np.sin(theta) - 0.5*rho*abs(vz[i])*vz[i]*(S*Cx + Spara*Cpara) - m*g)/m
 
@@ -40,7 +39,6 @@ def vol(N,theta,tsim,m=30e3,g=9.81,x0=0,z0=0,vx0=0,vz0=0,ax0=0,az0=0,Cx=0.5,S=np
             m -= q*dt
         if m <= mcap:
             prop = 0
-
         vx[i+1] = vx[i] + (ax[i+1] + ax[i])*dt/2
         vz[i+1] = vz[i] + (az[i+1] + az[i])*dt/2
 
@@ -61,12 +59,11 @@ def atmosphere(z):
 
     elif 20000 < z <= 32000:
         lbd = 1e-3
-        T = 288.15 + lbd*(z - 20000)
         rho = 0.086261*(216.65/T)**(1 + B/lbd)
 
     elif 32000 < z <= 47000:
         lbd = 2.8e-3
-        T = 288.15  + lbd*(z - 32000)
+        T = 228.65  + lbd*(z - 32000)
         rho = 0.012961*(228.65/T)**(1 + B/lbd)
 
     elif z > 47000:
@@ -127,8 +124,8 @@ color = 'tab:red'
 ax0.set_xlabel('x (km)', color='tab:blue')
 ax0.set_ylabel('z (km)', color=color)
 ax0.set_title('Vol d\'Alan Shepard')
-ax0.plot(x1/1000,z1/1000)
-ax0.plot(x2/1000,z2/1000)
+ax0.plot(x1/1000,z1/1000, label='durée du vol')
+ax0.plot(x2/1000,z2/1000, label=(len(z1) + len(z2)+ len(z3) + len(z4))/N)
 ax0.plot(x3/1000,z3/1000, label=int(max(x4))/1000)
 ax0.plot(x4/1000,z4/1000, label=int(max(z4))/1000)
 
@@ -147,14 +144,14 @@ fig, ax1 = plt.subplots()
 color = 'tab:red'
 ax1.set_xlabel('time (s)')
 ax1.set_ylabel('z', color=color)
-ax1.plot(np.linspace(147.5,tsim3+147.5,N),z4, color=color)
+ax1.plot(z2, color=color)
 ax1.tick_params(axis='y', labelcolor=color)
 
 ax2 = ax1.twinx()
 
 color = 'tab:blue'
 ax2.set_ylabel('g', color=color)
-ax2.plot(np.linspace(147.5,tsim3+147.5,N),az4/10, color=color)
+ax2.plot(az2, color=color)
 ax2.tick_params(axis='y', labelcolor=color)
 
 fig.tight_layout()
