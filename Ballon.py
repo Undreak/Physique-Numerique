@@ -29,7 +29,7 @@ def tir_num_f(theta,v0,tsim,m=0.450,g=9.81,x0=16,z0=0,Cx=0.45,S=np.pi*(0.11)**2,
     dt = tsim/N
     for i in range(N-1):
         dxdt[i+1] = dxdt[i] -0.5*rho*Cx*S*abs(dxdt[i])*dxdt[i]*dt
-        dzdt[i+1] = dzdt[i] + ( -0.5*rho*Cx*S*abs(dzdt[i])*dzdt[i] - m*g*t[i])*dt
+        dzdt[i+1] = dzdt[i] + ( -0.5*rho*Cx*S*abs(dzdt[i])*dzdt[i] - g*t[i])*dt/m
         x[i+1] = x[i] + dxdt[i+1]*dt
         z[i+1] = z[i] + dzdt[i+1]*dt
         if z[i+1] < 0:
