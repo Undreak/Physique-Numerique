@@ -21,7 +21,6 @@ def tir_num(theta,v0,tsim,g = 9.81,x0=16,z0=0):
 
 def tir_num_f(theta,v0,tsim,m=0.450,g=9.81,x0=16,z0=0,Cx=0.45,S=np.pi*(0.11)**2,rho=1.225):
     N = 1000
-    t = np.linspace(0,tsim,N)
     x, z = np.zeros(N),np.zeros(N)
     x[0], z[0] = x0, z0
     dxdt,dzdt = np.zeros(N),np.zeros(N)
@@ -29,7 +28,7 @@ def tir_num_f(theta,v0,tsim,m=0.450,g=9.81,x0=16,z0=0,Cx=0.45,S=np.pi*(0.11)**2,
     dt = tsim/N
     for i in range(N-1):
         dxdt[i+1] = dxdt[i] -0.5*rho*Cx*S*abs(dxdt[i])*dxdt[i]*dt
-        dzdt[i+1] = dzdt[i] + ( -0.5*rho*Cx*S*abs(dzdt[i])*dzdt[i] - g*t[i])*dt/m
+        dzdt[i+1] = dzdt[i] + ( -0.5*rho*Cx*S*abs(dzdt[i])*dzdt[i] - m*g)*dt/m 
         x[i+1] = x[i] + dxdt[i+1]*dt
         z[i+1] = z[i] + dzdt[i+1]*dt
         if z[i+1] < 0:
@@ -60,7 +59,8 @@ for i in range(3,13):
 
 print('maximum de x avec frottement => theta = pi/6')
 print('maximum de x sans frottement => theta = pi/4')
-
+print('xmax = ', max(x))
+print('xfmax = ', max(xf))
 ############# Tracé des graphiques
 
 fig, ax0 = plt.subplots()

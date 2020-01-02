@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 ################ Définition des fonctions
 
-def vol(N,theta,tsim,m=29981,x0=0,z0=0,vx0=0,vz0=0,ax0=0,az0=0,Cx=0.5,S=np.pi*(0.89)**2,poussee=0,thetaF=0,retro=0):
+def vol(N,theta,tsim,m=29981,x0=0,z0=0,vx0=0,vz0=0,ax0=0,az0=0,Cx=0.5,S=np.pi*(0.89)**2,poussee=0,thetaF=0):
     ## Initialisation de tous les vecteurs.
     t = int(tsim*N)
     dt = 1/N
@@ -25,9 +25,7 @@ def vol(N,theta,tsim,m=29981,x0=0,z0=0,vx0=0,vz0=0,ax0=0,az0=0,Cx=0.5,S=np.pi*(0
         if vz[i] < 0:
             Cx = coeff(vz[i],vx[i],T)    ## Calcul du coeff Cx lors de la descente
             Spara = para(z[i])             ## et de Spara à partir d'une certaine altitude.
-            if retro == 1:
-                vx[i] -= 0
-                retro = 0
+
         if z[i] < 0:            ## On arrete le calcul quand la fusée touhe le sol et on ne garde que les dernières données calculé
             x,z,m,vx,vz,ax,az,Ttab,rhotab = x[:i],z[:i],m,vx[:i],vz[:i],ax[:i],az[:i],Ttab[:i],rhotab[:i]
             break
@@ -35,21 +33,49 @@ def vol(N,theta,tsim,m=29981,x0=0,z0=0,vx0=0,vz0=0,ax0=0,az0=0,Cx=0.5,S=np.pi*(0
         rhotab[i+1] = rho
         if thetaF != 0 and i <= 24/dt:
             theta -= (thetaI - thetaF)*dt/24    ## Calcul de la variation d'angle, pi/2 => pi/4 en 24 secondes
-
-        ax[i+1] = ( prop - 0.5*rho*abs(vx[i])*vx[i]*(S*Cx + Spara*Cpara)*np.cos(theta))*np.cos(theta)/m
-        az[i+1] = ( prop - 0.5*rho*abs(vz[i])*vz[i]*(S*Cx + Spara*Cpara)*np.sin(theta))*np.sin(theta)/m - g
+        #ax[i+1] = ( prop - 0.5*rho*abs(vx[i])*vx[i]*(S*Cx + Spara*Cpara))*np.cos(theta)/m
+        #az[i+1] = ( prop - 0.5*rho*abs(vz[i])*vz[i]*(S*Cx + Spara*Cpara))*np.sin(theta)/m - g
 
         if poussee == 1:    ## Calcul de la variation de masse
             m -= q*dt
         if m <= mcap:       ## Simple précaution pour éviter que le programme ne fasse n'importe quoi
             prop = 0
-        vx[i+1] = vx[i] + (ax[i+1] + ax[i])*dt/2
-        vz[i+1] = vz[i] + (az[i+1] + az[i])*dt/2
+        ##Calcul de la vitesse par la méthode de Runge-Kutta d'ordre 4
+        k1 = acceleration(z[i],vx[i],vz[i],theta,m,poussee,N)
+        vx1,vz1 = vx[i]+k1[0]*dt/2 , vz[i]+k1[1]*dt/2
+        k2 = acceleration(z[i],vx1,vz1,theta,m,poussee,N)
+        vx2,vz2 = vx[i]+k2[0]*dt/2 , vz[i]+k2[1]*dt/2
+        k3 = acceleration(z[i],vx2,vz2,theta,m,poussee,N)
+        vx3,vz3 = vx[i]+k3[0]*dt , vz[i]+k3[1]*dt
+        k4 = acceleration(z[i],vx3,vz3,theta,m,poussee,N)
+        vx4,vz4 = vx[i]+dt*(k1[0]+2*k2[0]+2*k3[0]+k4[0])/6 , vz[i]+dt*(k1[1]+2*k2[1]+2*k3[1]+k4[1])/6
 
-        x[i+1] = x[i] + (vx[i+1] + vx[i])*dt/2
-        z[i+1] = z[i] + (vz[i+1] + vz[i])*dt/2
+        vx[i+1] = vx4
+        vz[i+1] = vz4
+
+        x[i+1] = x[i] + vx[i]*dt
+        z[i+1] = z[i] + vz[i]*dt
+        
+        ax[i+1] = ( prop - 0.5*rho*abs(vx[i+1])*vx[i+1]*(S*Cx + Spara*Cpara))*np.cos(theta)/m
+        az[i+1] = ( prop - 0.5*rho*abs(vz[i+1])*vz[i+1]*(S*Cx + Spara*Cpara))*np.sin(theta)/m - g
+
     return x,z,m,vx,vz,ax,az,Ttab,rhotab
 
+def acceleration(z,vx,vz,theta,m,poussee,N,S=np.pi*(0.89)**2,Cpara=1.75,Spara=0,Cx=0.5):
+    T, rho = atmosphere(z)  ## Calcul de la densité de l'air et de la température en fontion de l'altitude.
+    if vz < 0:
+        Cx = coeff(vz,vx,T)    ## Calcul du coeff Cx lors de la descente
+        Spara = para(z)             ## et de Spara à partir d'une certaine altitude.
+    prop = q*ve
+    if poussee == 1:    ## Calcul de la variation de masse
+        m -= q/N
+    if m <= mcap:       ## Simple précaution pour éviter que le programme ne fasse n'importe quoi
+        prop = 0
+    ax = ( prop - 0.5*rho*abs(vx)*vx*(S*Cx + Spara*Cpara))*np.cos(theta)/m
+    az = ( prop - 0.5*rho*abs(vz)*vz*(S*Cx + Spara*Cpara))*np.sin(theta)/m - g
+
+    return ax, az
+    
 def atmosphere(z):
     B = 34.16e-3
     if z <= 11000:
@@ -132,21 +158,24 @@ x2,z2,m2,vx2,vz2,ax2,az2,Ttab2,rhotab2 = vol(N,theta1,tsim2,x0=x1[-1],z0=z1[-1],
 ## Largage de la tour d’éjection d’urgence à la fin de la poussée de la fusée
 x3,z3,m3,vx3,vz3,ax3,az3,Ttab3,rhotab3 = vol(N,theta2,4,x0=x2[-1],z0=z2[-1],m=m2-580,vx0=vx2[-1],vz0=vz2[-1],ax0=ax2[-1],az0=az2[-1])
 ## Séparation de la capsule Mercury 4 secondes après la fin de la poussée
-x4,z4,m4,vx4,vz4,ax4,az4,Ttab4,rhotab4 = vol(N,np.pi*34/180,tsim3,x0=x3[-1],z0=z3[-1],m=1295,vx0=vx3[-1],vz0=vz3[-1],ax0=ax3[-1],az0=az3[-1],retro=1)
+x4,z4,m4,vx4,vz4,ax4,az4,Ttab4,rhotab4 = vol(N,np.pi*34/180,tsim3,x0=x3[-1],z0=z3[-1],m=1400,vx0=vx3[-1],vz0=vz3[-1],ax0=ax3[-1],az0=az3[-1])
 
 t1 = np.linspace(0,len(z1)/N,len(z1))
-t2 = np.linspace(len(z1)/N,len(z1)/N+len(z2)/N,len(z2))
-t3 = np.linspace(len(z1)/N+len(z2)/N,len(z1)/N+len(z2)/N+len(z3)/N,len(z3))
-t4 = np.linspace(len(z1)/N+len(z2)/N+len(z3)/N,len(z1)/N+len(z2)/N+len(z3)/N+len(z4)/N,len(z4))
+t12 = np.linspace(t1[-1],40,2400)
+t2 = np.linspace(t12[-1],143.5,10350)
+t3 = np.linspace(t2[-1],t2[-1]+4,len(z3))
+t4 = np.linspace(t3[-1],len(z1)/N+len(z2)/N+len(z3)/N+len(z4)/N,len(z4))
 
+para1 = int(np.argwhere(z4<=6700)[0])
+para2 = int(np.argwhere(z4<=3000)[0])
 ############## Tracé des graphiques
 
 #plt.plot(t1,az1) and plt.plot(t2,az2) and plt.plot(t3,az3) and plt.plot(t4,az4)
 #plt.plot(t1,ax1) and plt.plot(t2,ax2) and plt.plot(t3,ax3) and plt.plot(t4,ax4)
-plt.plot(z1,(az1**2 + ax1**2)**0.5) and plt.plot(z2,(az2**2 + ax2**2)**0.5) and plt.plot(z3,(az3**2 + ax3**2)**0.5) and plt.plot(z4,(az4**2 + ax4**2)**0.5)
+plt.plot(t1,(az1**2 + ax1**2)**0.5) and plt.plot(t12,(az2[0:2400]**2 + ax2[0:2400]**2)**0.5) and plt.plot(t2,(az2[2400:]**2 + ax2[2400:]**2)**0.5) and plt.plot(t3,(az3**2 + ax3**2)**0.5) and plt.plot(t4,(az4**2 + ax4**2)**0.5)
 plt.title('Accélération en fonction du temps')
-plt.xlabel('z(m)', color='tab:blue')
-plt.ylabel('a (m/s^2)')
+plt.xlabel('t (s)', color='tab:blue')
+plt.ylabel('a (m/s^2)', color='tab:red')
 plt.tick_params(axis='y', labelcolor='tab:red')
 plt.tick_params(axis='x', labelcolor='tab:blue')
 plt.savefig('Accélération en fonction du temps.png',dpi=300)
@@ -157,15 +186,22 @@ color = 'tab:red'
 ax0.set_xlabel('x (km)', color='tab:blue')
 ax0.set_ylabel('z (km)', color=color)
 ax0.set_title('Vol d\'Alan Shepard')
-ax0.plot(x1/1000,z1/1000)
-ax0.plot(x2/1000,z2/1000, label=round((len(z1) + len(z2)+ len(z3) + len(z4))/(N*60),2))
-ax0.plot(x3/1000,z3/1000, label=int(max(x4))/1000)
-ax0.plot(x4/1000,z4/1000, label=int(max(z4))/1000)
+ax0.plot(x1/1000,z1/1000, label='Décollage')
+ax0.plot(x2[0:2400]/1000,z2[0:2400]/1000, label='Rotation de la fusée')
+ax0.plot(x2[2400:]/1000,z2[2400:]/1000, label='Poussée')
+ax0.plot(x3/1000,z3/1000, label='Largage de la tour de sauvetage')
+ax0.plot(x4/1000,z4/1000, label='Chute libre')
+ax0.plot(x4[para1]/1000,z4[para1]/1000,'.', label='Ouverture du parachute pilote')
+ax0.plot(x4[para2]/1000,z4[para2]/1000,'.', label='Ouverture du parachute principal')
+
+print('Temps de vol :',round((len(z1) + len(z2)+ len(z3) + len(z4))/(N*60),2))
+print('Distance parcourue :', int(max(x4))/1000)
+print('Altitude maximale :', int(max(z4))/1000)
 
 ax0.tick_params(axis='y', labelcolor=color)
 ax0.tick_params(axis='x', labelcolor='tab:blue')
 
-leg = ax0.legend(loc="center",ncol=2, shadow=True, title="x max et z max (km)", fancybox=True)
+leg = ax0.legend(loc="best",ncol=1, shadow=True, title="Phases de vol", fancybox=True)
 leg.get_title().set_color("red")
 
 plt.savefig('Vol d\'Alan Shepard.png',dpi=300)
